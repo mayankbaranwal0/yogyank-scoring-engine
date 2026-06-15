@@ -7,8 +7,8 @@ rather than baked into the model.
 
 This repository is, at heart, a **case study in doing that scoring correctly**.
 It pairs a deliberately flawed baseline trainer with a data-audit tool that
-exposes the traps — data leakage, a misleading validation split, and policy
-injected into the label — so they can be understood and fixed before any model
+exposes the traps (data leakage, a misleading validation split, and policy
+injected into the label) so they can be understood and fixed before any model
 is trusted.
 
 ---
@@ -19,14 +19,14 @@ is trusted.
 |------|------|
 | `farmer_scoring_sample_yogyank_round1.csv` | Synthetic farmer dataset (~features + target + a forward-looking outcome). |
 | `broken_yogyank_training.py` | A **deliberately flawed** baseline XGBoost trainer (the "looks great, ship it" draft). Demonstrates the mistakes. |
-| `build_dashboard.py` | Builds the **HTML Data Explorer** — a self-contained, offline data audit. |
-| `yogyank_data_explorer.html` | The report **you generate** by running `build_dashboard.py` (the default output filename) — the preferred way to view it. |
+| `build_dashboard.py` | Builds the **HTML Data Explorer**, a self-contained, offline data audit. |
+| `yogyank_data_explorer.html` | The report **you generate** by running `build_dashboard.py` (the default output filename). This is the preferred way to view it. |
 | `yogyank_data_explorer_example.html` | A prebuilt example report, as a fallback for when you can't generate your own. |
 | `requirements.txt` | Python dependencies. |
 
 The dataset's target is `target_entitlement_score`. The column
 `defaulted_in_next_12_months` is a **forward-looking outcome** that cannot be
-known at scoring time — using it as a feature is leakage, and the explorer marks
+known at scoring time. Using it as a feature is leakage, and the explorer marks
 it in red everywhere it appears.
 
 ---
@@ -60,7 +60,7 @@ python broken_yogyank_training.py
 ```
 
 It writes a model to `xgboost_baseline.pkl` and prints a glowing validation
-score — which is exactly the problem. The script:
+score, which is exactly the problem. The script:
 
 - uses `defaulted_in_next_12_months` (a future outcome) as a feature → **leakage**,
 - splits the data **randomly** instead of out-of-time, and
@@ -75,9 +75,9 @@ The Data Explorer below quantifies how much of that "great" score is illusion.
 A single, self-contained, **offline-viewable** HTML report that audits the data
 before you trust it: schema/leakage contract, target shape, signal-vs-leakage,
 missingness, temporal drift, and the policy-injection illustration. The full
-Plotly library is embedded in the file — no server, no internet needed to view it.
+Plotly library is embedded in the file, so no server or internet is needed to view it.
 
-**The preferred way is to generate it yourself** — run `build_dashboard.py` to
+**The preferred way is to generate it yourself.** Run `build_dashboard.py` to
 build the report from the CSV, then open the result. A prebuilt
 `yogyank_data_explorer_example.html` is included only as a **fallback** for when
 you can't generate your own.
@@ -105,14 +105,14 @@ The report is a single `.html` file you can open in any browser. Open the report
 you just generated:
 
 ```powershell
-# Your own generated report — from the project folder
+# Your own generated report, from the project folder
 start yogyank_data_explorer.html
 
 # Or with a full path
 start D:\trynew\yogyank-scoring-engine\yogyank_data_explorer.html
 ```
 
-Fallback — if you couldn't generate your own, open the prebuilt example instead:
+Fallback: if you couldn't generate your own, open the prebuilt example instead:
 
 ```powershell
 start yogyank_data_explorer_example.html
@@ -140,7 +140,7 @@ python build_dashboard.py && start yogyank_data_explorer.html
 |---|---------|---------------------|
 | 01 | Schema & as-of-date contract | What's in the table, and which fields are we allowed to use? |
 | 02 | Target | What are we predicting? |
-| 03 | Signal vs. leakage | Is there real signal — and where is the trap? |
+| 03 | Signal vs. leakage | Is there real signal, and where is the trap? |
 | 04 | Gaps | Where is the data thin or absent? |
 | 05 | Temporal | Can we validate the future (out-of-time split)? |
 | 06 | Policy | Model vs. injected policy rule |
@@ -152,4 +152,4 @@ python build_dashboard.py && start yogyank_data_explorer.html
 
 The data is **synthetic** and the R² figures in the report are a *directional*
 reproduction of the draft trainer, not exact. Nothing here is a production
-validation result — the point is the methodology, not the numbers.
+validation result; the point is the methodology, not the numbers.

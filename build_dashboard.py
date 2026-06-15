@@ -7,14 +7,14 @@ Yogyank farmer entitlement-scoring dataset.
 What it does
 ------------
 Reads the synthetic farmer CSV and emits one .html file that you can open by
-double-clicking — no server, no internet, no Python needed to *view* it. The
+double-clicking, with no server, no internet, and no Python needed to *view* it. The
 full Plotly library is embedded once inside the file.
 
 The views are chosen to answer questions this project actually needs, not to
 decorate: schema/contract, target shape, signal-vs-leakage, gaps (missingness),
 temporal drift (does the validation split make sense?), and the policy-injection
 illustration. The leakage column is marked in red everywhere it appears, as a
-deliberate visual through-line meaning "disqualified — cannot be used at scoring
+deliberate visual through-line meaning "disqualified: cannot be used at scoring
 time."
 
 Run
@@ -24,10 +24,10 @@ Run
     python build_dashboard.py path/to/data.csv out.html
 
 The R^2 "collapse" waterfall needs xgboost + scikit-learn (you already have
-them). If they are missing, the script still builds — that one panel degrades
+them). If they are missing, the script still builds; that one panel degrades
 to a short note instead of crashing.
 
-Author: (your name) — adapted as a learning project.
+Author: (your name). Adapted as a learning project.
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ TEAL    = "#2F6F69"   # signal / trustworthy
 TEAL_2  = "#5B958F"
 CLAY    = "#B5733A"   # temporal / earth
 GOLD    = "#C8A24B"   # policy
-LEAK    = "#C0392B"   # danger / leakage — reserved
+LEAK    = "#C0392B"   # danger / leakage (reserved)
 LEAK_BG = "#F6E3E0"
 
 ROLE_COLORS = {
@@ -123,9 +123,9 @@ ROLE_COLORS = {
 }
 AVAIL_LABEL = {
     "yes":    ("available",      TEAL),
-    "no":     ("LEAK — drop",    LEAK),
+    "no":     ("LEAK: drop",     LEAK),
     "assume": ("verify as-of",   CLAY),
-    "na":     ("—",              MUTED),
+    "na":     ("n/a",            MUTED),
 }
 
 FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -205,7 +205,7 @@ def fig_target(df: pd.DataFrame) -> go.Figure:
                                  hovertemplate="score %{x}<br>%{y} farmers<extra></extra>"))
     fig.add_vline(x=s.mean(), line_dash="dash", line_color=INK,
                   annotation_text=f"mean {s.mean():.0f}", annotation_position="top")
-    fig.update_layout(title="Target — entitlement score (what we predict)",
+    fig.update_layout(title="Target: entitlement score (what we predict)",
                       xaxis_title="target_entitlement_score", yaxis_title="farmers")
     return _style(fig, 360)
 
@@ -219,7 +219,7 @@ def fig_signal(df: pd.DataFrame) -> go.Figure:
         x=corr.values, y=labels, orientation="h", marker_color=colors,
         hovertemplate="%{y}<br>|corr| %{x:.3f}<extra></extra>"))
     fig.update_layout(
-        title="Signal vs. leakage — |correlation| with the target",
+        title="Signal vs. leakage: |correlation| with the target",
         xaxis_title="absolute correlation with target", yaxis_title="")
     fig.add_annotation(x=corr[LEAK_COL], y=f"{LEAK_COL}  ⛔",
                        text="strongest signal is the one you can't have",
@@ -238,7 +238,7 @@ def fig_leakage_spotlight(df: pd.DataFrame) -> go.Figure:
     fig.add_trace(go.Histogram(x=g1, nbinsx=40, name=f"defaulted (mean {g1.mean():.0f})",
                                marker_color=LEAK, opacity=0.75))
     fig.update_layout(
-        title=f"Why it's leakage — the score already 'knows' the future ({g0.mean()-g1.mean():.0f}-pt gap)",
+        title=f"Why it's leakage: the score already 'knows' the future ({g0.mean()-g1.mean():.0f}-pt gap)",
         barmode="overlay", xaxis_title="target_entitlement_score", yaxis_title="farmers")
     return _style(fig, 360)
 
@@ -318,7 +318,7 @@ def fig_missingness(df: pd.DataFrame) -> tuple[go.Figure, str]:
     fig = go.Figure(go.Bar(x=miss.values, y=miss.index, orientation="h",
                            marker_color=CLAY,
                            hovertemplate="%{y}<br>%{x:.1f}% missing<extra></extra>"))
-    fig.update_layout(title="Gaps — where values are absent",
+    fig.update_layout(title="Gaps: where values are absent",
                       xaxis_title="% missing", yaxis_title="")
     # Co-missingness: do the two gappy columns vanish together?
     a, b = "ndvi_score", "rainfall_deviation_pct"
@@ -330,7 +330,7 @@ def fig_missingness(df: pd.DataFrame) -> tuple[go.Figure, str]:
         rel = both / expected if expected else float("nan")
         note = (f"{a} and {b} are each ~{pa*100:.0f}% missing. They go missing together "
                 f"{both*100:.1f}% of the time vs. {expected*100:.1f}% if independent "
-                f"(×{rel:.1f}) — {'patterned, treat missingness as signal' if rel>1.3 else 'roughly independent'}.")
+                f"(×{rel:.1f}): {'patterned, treat missingness as signal' if rel>1.3 else 'roughly independent'}.")
     return _style(fig, 320), note
 
 
@@ -348,7 +348,7 @@ def fig_temporal(df: pd.DataFrame) -> go.Figure:
         fig.add_trace(go.Box(y=df.loc[df[TEMPORAL] == y, TARGET], name=str(y),
                              marker_color=col, boxmean=True, showlegend=False),
                       row=1, col=2)
-    fig.update_layout(title="Temporal — can we validate the future? (2024 held out)")
+    fig.update_layout(title="Temporal: can we validate the future? (2024 held out)")
     return _style(fig, 360)
 
 
@@ -363,7 +363,7 @@ def fig_policy(df: pd.DataFrame) -> go.Figure:
                          textposition="outside",
                          hovertemplate="%{x}: %{y:.0f}<extra></extra>"))
     fig.update_layout(
-        title="Policy injection — the script invents a rule, it doesn't recover one",
+        title="Policy injection: the script invents a rule, it doesn't recover one",
         yaxis_title="points", showlegend=False)
     return _style(fig, 320)
 
@@ -379,9 +379,9 @@ def fig_numeric_explorer(df: pd.DataFrame) -> go.Figure:
         vis = [j == i for j in range(len(NUMERIC_FEATURES))]
         buttons.append(dict(label=c, method="update",
                             args=[{"visible": vis},
-                                  {"title": f"Explore — {c}", "xaxis": {"title": c}}]))
+                                  {"title": f"Explore: {c}", "xaxis": {"title": c}}]))
     fig.update_layout(
-        title=f"Explore — {NUMERIC_FEATURES[0]}",
+        title=f"Explore: {NUMERIC_FEATURES[0]}",
         xaxis_title=NUMERIC_FEATURES[0], yaxis_title="farmers", showlegend=False,
         updatemenus=[dict(buttons=buttons, x=1.0, xanchor="right", y=1.18,
                           yanchor="top", bgcolor=SURFACE, bordercolor=BORDER)])
@@ -399,9 +399,9 @@ def fig_categorical_explorer(df: pd.DataFrame) -> go.Figure:
     for i, c in enumerate(CATEGORICAL_FEATURES):
         vis = [j == i for j in range(len(CATEGORICAL_FEATURES))]
         buttons.append(dict(label=c, method="update",
-                            args=[{"visible": vis}, {"title": f"Explore — {c}"}]))
+                            args=[{"visible": vis}, {"title": f"Explore: {c}"}]))
     fig.update_layout(
-        title=f"Explore — {CATEGORICAL_FEATURES[0]}", showlegend=False,
+        title=f"Explore: {CATEGORICAL_FEATURES[0]}", showlegend=False,
         xaxis_title="count",
         updatemenus=[dict(buttons=buttons, x=1.0, xanchor="right", y=1.18,
                           yanchor="top", bgcolor=SURFACE, bordercolor=BORDER)])
@@ -510,7 +510,7 @@ def build_html(df: pd.DataFrame) -> str:
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Yogyank — data explorer</title>
+<title>Yogyank data explorer</title>
 <style>{css}</style>
 <script>{plotlyjs}</script>
 </head><body>
@@ -521,21 +521,21 @@ def build_html(df: pd.DataFrame) -> str:
     <h1>Reading the data before we trust it</h1>
     <p>A synthetic farmer dataset for a bank-agnostic entitlement score. Every panel
        answers a question the project needs. <strong style="color:{LEAK}">Red marks the
-       leak</strong> — a field that cannot be known at scoring time — wherever it appears.</p>
+       leak</strong> (a field that cannot be known at scoring time) wherever it appears.</p>
     <div class="cards">{stat_cards(df)}</div>
   </header>
 
   {section("01", "orientation", "Schema &amp; the as-of-date contract",
            f'<div class="panel" style="padding:0;background:transparent;border:none">{schema_table_html(df)}</div>'
            '<p class="note" style="margin-top:10px">This table is the first draft of your schema/contract deliverable. '
-           '"Available before scoring?" is the only question that matters for leakage — assumptions in clay must be verified against real feature definitions.</p>',
+           '"Available before scoring?" is the only question that matters for leakage; assumptions in clay must be verified against real feature definitions.</p>',
            "What is in the table, and which fields are we even allowed to use.")}
 
   {section("02", "target", "What we are predicting",
            f'<div class="panel">{target}</div>',
-           "The score is continuous and bounded — so report error in points (MAE), not just R².")}
+           "The score is continuous and bounded, so report error in points (MAE), not just R².")}
 
-  {section("03", "signal vs. leakage", "Is there real signal — and where is the trap?",
+  {section("03", "signal vs. leakage", "Is there real signal, and where is the trap?",
            f'<div class="grid2"><div class="panel">{signal}</div><div class="panel">{leak_spot}</div></div>'
            f'<div class="panel">{waterfall}</div>'
            f'<p class="note-box leak">{html.escape(wf_note)}</p>',
@@ -544,19 +544,19 @@ def build_html(df: pd.DataFrame) -> str:
   {section("04", "gaps", "Where the data is thin or absent",
            f'<div class="panel">{missing}</div>'
            + (f'<p class="note-box">{html.escape(miss_note)}</p>' if miss_note else ""),
-           "Missingness that follows a pattern is itself information — and a potential leak if the pattern depends on the outcome.")}
+           "Missingness that follows a pattern is itself information, and a potential leak if the pattern depends on the outcome.")}
 
   {section("05", "temporal", "Can we validate the future?",
            f'<div class="panel">{temporal}</div>',
-           "Three application years let us train on 2022–2023 and score 2024 — an out-of-time split that mimics deployment. Watch whether 2024 drifts.")}
+           "Three application years let us train on 2022–2023 and score 2024, an out-of-time split that mimics deployment. Watch whether 2024 drifts.")}
 
   {section("06", "policy", "Model vs. policy",
            f'<div class="panel">{policy}</div>',
-           "The draft script subtracts 150 from the label for non-PM-Kisan farmers. The real gap in the data is far smaller — so the rule is injected, not learned. Policy belongs in a transparent post-processing layer.")}
+           "The draft script subtracts 150 from the label for non-PM-Kisan farmers. The real gap in the data is far smaller, so the rule is injected, not learned. Policy belongs in a transparent post-processing layer.")}
 
   {section("07", "explore", "Poke at the columns",
            f'<div class="grid2"><div class="panel">{num_exp}</div><div class="panel">{cat_exp}</div></div>',
-           "Use the dropdowns to switch fields. Rare categories give unstable encodings and shaky reason codes — worth noting now.")}
+           "Use the dropdowns to switch fields. Rare categories give unstable encodings and shaky reason codes, worth noting now.")}
 
   <footer>
     <p>Generated {stamp} from <code>{html.escape(Path(CSV_PATH).name)}</code> by <code>build_dashboard.py</code>.
