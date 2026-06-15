@@ -138,11 +138,12 @@ Reading this honestly:
 
 ### 2.4 Reproducibility
 - **The whole pipeline is persisted**, plus a metadata sidecar (feature list, target name,
-  `train_max_year`) in a single `joblib` bundle, so anyone can reload it and score a raw
-  record end-to-end.
+  `train_max_year`) in a single `joblib` bundle (`artifacts/entitlement_model.pkl`), so
+  anyone can reload it and score a raw record end-to-end.
 - Deterministic configuration retained (`random_state=42`, `n_jobs=1`).
-- `.pkl` artifacts are **gitignored** (reproducible from the script; binary, security-
-  sensitive to unpickle); the recipe is versioned, not the cake.
+- All generated outputs (model `.pkl` and HTML reports) are written to `artifacts/`, which
+  keeps them out of the source files while remaining fully reproducible by re-running the
+  scripts.
 
 ### 2.5 Model / policy separation
 - `pm_kisan_status` is now a **plain input feature** the model learns from clean data, not
@@ -153,7 +154,7 @@ Reading this honestly:
 ### 2.6 Explainability
 - Added an **honest baseline (`DummyRegressor`)** and report both **MAE and R²**, so the
   number is anchored and expressed in points.
-- **Feature importances** are printed and exported to `feature_importances.html`. The top
+- **Feature importances** are printed and exported to `artifacts/feature_importances.html`. The top
   drivers are now legitimate, scoring-time signals (`liability_ratio_pct`,
   `historical_repayment_score`, `land_area_acres`, `pm_kisan_status`, `irrigation_type`,
   and `annual_income_inr`), none of which leaks. There is finally a defensible answer to
@@ -196,4 +197,5 @@ The fixed pipeline is sound, but it is a **baseline**, not a production-validate
 
 *Original script (`broken_yogyank_training.py`) retained unchanged for comparison.
 Fixed pipeline: `fixed_yogyank_training.py`. Data audit visual: `build_dashboard.py` →
-`yogyank_data_explorer.html`.*
+`artifacts/yogyank_data_explorer.html`. Broken-vs-fixed comparison: `compare_models.py` →
+`artifacts/compare_models.html`.*

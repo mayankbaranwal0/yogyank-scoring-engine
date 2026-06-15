@@ -1,6 +1,3 @@
 # Python bytecode cache
 __pycache__/
 *.py[cod]
-
-# Trained model artifacts
-*.pkl

@@ -47,7 +47,7 @@ from plotly.offline import get_plotlyjs
 # Configuration
 # --------------------------------------------------------------------------- #
 CSV_PATH = "farmer_scoring_sample_yogyank_round1.csv"
-OUTPUT_HTML = "yogyank_data_explorer.html"
+OUTPUT_HTML = "artifacts/yogyank_data_explorer.html"
 
 TARGET = "target_entitlement_score"
 LEAK_COL = "defaulted_in_next_12_months"          # forward-looking outcome
@@ -573,9 +573,11 @@ def main() -> None:
     out_path = sys.argv[2] if len(sys.argv) > 2 else OUTPUT_HTML
     df = load_data(csv_path)
     html_str = build_html(df)
-    Path(out_path).write_text(html_str, encoding="utf-8")
-    size_mb = Path(out_path).stat().st_size / 1e6
-    print(f"Wrote {out_path}  ({size_mb:.1f} MB, self-contained, open in any browser)")
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html_str, encoding="utf-8")
+    size_mb = out.stat().st_size / 1e6
+    print(f"Wrote {out}  ({size_mb:.1f} MB, self-contained, open in any browser)")
 
 
 if __name__ == "__main__":

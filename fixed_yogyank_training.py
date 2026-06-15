@@ -16,6 +16,8 @@ What this fixes vs. the original draft:
   - Feature importances exported for explainability.
 """
 
+import os
+
 import joblib
 import pandas as pd
 import plotly.express as px
@@ -28,7 +30,9 @@ from sklearn.preprocessing import OneHotEncoder
 from xgboost import XGBRegressor
 
 DATA_PATH = "farmer_scoring_sample_yogyank_round1.csv"
-MODEL_PATH = "entitlement_model.pkl"
+ARTIFACTS_DIR = "artifacts"
+MODEL_PATH = os.path.join(ARTIFACTS_DIR, "entitlement_model.pkl")
+IMPORTANCE_PATH = os.path.join(ARTIFACTS_DIR, "feature_importances.html")
 TARGET = "target_entitlement_score"
 TIME_COL = "application_year"
 TRAIN_MAX_YEAR = 2023  # train on <= this year, test on the year(s) after
@@ -111,6 +115,7 @@ def feature_importance_frame(pipeline):
 
 
 def train():
+    os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     df = load_data()
     X_train, X_test, y_train, y_test = time_based_split(df)
     print(f"Train rows: {len(X_train)} (<= {TRAIN_MAX_YEAR})  |  Test rows: {len(X_test)} (> {TRAIN_MAX_YEAR})")
@@ -138,8 +143,8 @@ def train():
         orientation="h",
         title="Entitlement model - feature importances",
     )
-    fig.write_html("feature_importances.html")
-    print("\nSaved importance chart to feature_importances.html")
+    fig.write_html(IMPORTANCE_PATH)
+    print(f"\nSaved importance chart to {IMPORTANCE_PATH}")
 
     # Persist the WHOLE pipeline + metadata so it can be reloaded and rebuilt.
     bundle = {

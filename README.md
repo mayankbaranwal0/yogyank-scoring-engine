@@ -20,7 +20,8 @@ is trusted.
 | `farmer_scoring_sample_yogyank_round1.csv` | Synthetic farmer dataset (~features + target + a forward-looking outcome). |
 | `broken_yogyank_training.py` | A **deliberately flawed** baseline XGBoost trainer (the "looks great, ship it" draft). Demonstrates the mistakes. |
 | `build_dashboard.py` | Builds the **HTML Data Explorer**, a self-contained, offline data audit. |
-| `yogyank_data_explorer.html` | The report **you generate** by running `build_dashboard.py` (the default output filename). This is the preferred way to view it. |
+| `artifacts/` | Generated outputs (model `.pkl` and HTML reports). Created automatically when you run the scripts. |
+| `artifacts/yogyank_data_explorer.html` | The report **you generate** by running `build_dashboard.py` (the default output location). This is the preferred way to view it. |
 | `yogyank_data_explorer_example.html` | A prebuilt example report, as a fallback for when you can't generate your own. |
 | `requirements.txt` | Python dependencies. |
 
@@ -88,8 +89,9 @@ you can't generate your own.
 python build_dashboard.py
 ```
 
-This reads the default CSV and writes `yogyank_data_explorer.html`. You can also
-pass a custom input CSV and/or output filename:
+This reads the default CSV and writes `artifacts/yogyank_data_explorer.html`
+(the `artifacts/` folder is created automatically). You can also pass a custom
+input CSV and/or output filename:
 
 ```powershell
 python build_dashboard.py path/to/data.csv out.html
@@ -106,10 +108,10 @@ you just generated:
 
 ```powershell
 # Your own generated report, from the project folder
-start yogyank_data_explorer.html
+start artifacts\yogyank_data_explorer.html
 
 # Or with a full path
-start D:\trynew\yogyank-scoring-engine\yogyank_data_explorer.html
+start D:\trynew\yogyank-scoring-engine\artifacts\yogyank_data_explorer.html
 ```
 
 Fallback: if you couldn't generate your own, open the prebuilt example instead:
@@ -121,9 +123,9 @@ start yogyank_data_explorer_example.html
 Open in a specific browser instead of the default:
 
 ```powershell
-Start-Process chrome  .\yogyank_data_explorer.html   # Chrome
-Start-Process msedge  .\yogyank_data_explorer.html   # Edge
-Start-Process firefox .\yogyank_data_explorer.html   # Firefox
+Start-Process chrome  .\artifacts\yogyank_data_explorer.html   # Chrome
+Start-Process msedge  .\artifacts\yogyank_data_explorer.html   # Edge
+Start-Process firefox .\artifacts\yogyank_data_explorer.html   # Firefox
 ```
 
 You can also just **double-click** the file in File Explorer.
@@ -131,7 +133,7 @@ You can also just **double-click** the file in File Explorer.
 ### Generate and open in one line
 
 ```powershell
-python build_dashboard.py && start yogyank_data_explorer.html
+python build_dashboard.py && start artifacts\yogyank_data_explorer.html
 ```
 
 ### What the report covers
