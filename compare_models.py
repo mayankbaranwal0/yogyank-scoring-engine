@@ -224,8 +224,9 @@ def main():
     fig.update_yaxes(title_text="MAE (points)", row=1, col=2)
     fig.update_yaxes(title_text="R&#178; on held-out farmers", row=1, col=3)
 
-    fig.write_html(OUTPUT_HTML)
-    print(f"Saved visual comparison to {OUTPUT_HTML}")
+    out = "compare_models.html"
+    fig.write_html(out)
+    print(f"Saved visual comparison to {out}")
 
 
 if __name__ == "__main__":

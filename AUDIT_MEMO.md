@@ -2,7 +2,7 @@
 
 **Scope:** Review and remediation of `broken_yogyank_training.py`, the baseline training
 script for the farmer entitlement score.
-**Dataset:** `farmer_scoring_sample_yogyank_round1.csv` (5,000 rows, 17 columns,
+**Dataset:** `farmer_scoring_sample_yogyank.csv` (5,000 rows, 17 columns,
 application years 2022–2024, target `target_entitlement_score` ∈ [421, 980]).
 **Outcome:** original script replaced by `fixed_yogyank_training.py` (original kept
 untouched for reference).
@@ -103,6 +103,10 @@ constant until the final two rows:
 | Add the missing features (13 features, still LabelEncoder) | 0.713 | **+0.337** |
 | Fix encoding & model (OneHotEncoder + impute + tuned XGB) | **0.741** | +0.029 |
 
+![Broken vs. fixed: headline R2, headline MAE, and the R2 decomposition waterfall](artifacts/compare_models_plot.png)
+
+*Snapshot of `artifacts/compare_models.html`.*
+
 Reading this honestly:
 - **The poisoned label was the single biggest inflator** (−0.241 R²): it let the model
   reproduce the −150 rule from `pm_kisan_status` instead of learning.
@@ -137,13 +141,18 @@ Reading this honestly:
   (`rainfall_deviation_pct` and `ndvi_score`, ~15% missing each).
 
 ### 2.4 Reproducibility
-- **The whole pipeline is persisted**, plus a metadata sidecar (feature list, target name,
-  `train_max_year`) in a single `joblib` bundle (`artifacts/entitlement_model.pkl`), so
-  anyone can reload it and score a raw record end-to-end.
+- **The whole pipeline is persisted** in a single `joblib` bundle
+  (`artifacts/entitlement_model.pkl`) with its feature list, target, and `train_max_year`,
+  so anyone can reload it and score a raw record end-to-end.
+- **A self-describing metadata sidecar** (`artifacts/model_metadata.json`) records the
+  schema/as-of-date contract, the feature lists, library versions, a SHA-256 hash of the
+  training data, and the validation summary (baseline vs. model MAE and R2). The schema and
+  contract live in one shared module (`schema.py`) used by both the trainer and the
+  explorer, so they cannot drift apart.
 - Deterministic configuration retained (`random_state=42`, `n_jobs=1`).
-- All generated outputs (model `.pkl` and HTML reports) are written to `artifacts/`, which
-  keeps them out of the source files while remaining fully reproducible by re-running the
-  scripts.
+- All generated outputs (model `.pkl`, metadata, and HTML reports) are written to
+  `artifacts/`, which keeps them out of the source files while remaining fully reproducible
+  by re-running the scripts.
 
 ### 2.5 Model / policy separation
 - `pm_kisan_status` is now a **plain input feature** the model learns from clean data, not
@@ -159,6 +168,10 @@ Reading this honestly:
   `historical_repayment_score`, `land_area_acres`, `pm_kisan_status`, `irrigation_type`,
   and `annual_income_inr`), none of which leaks. There is finally a defensible answer to
   "why did this farmer get this score?"
+
+![Feature importances of the fixed entitlement model](artifacts/feature_importances_plot.png)
+
+*Snapshot of `artifacts/feature_importances.html`.*
 
 ---
 
@@ -196,6 +209,6 @@ The fixed pipeline is sound, but it is a **baseline**, not a production-validate
 ---
 
 *Original script (`broken_yogyank_training.py`) retained unchanged for comparison.
-Fixed pipeline: `fixed_yogyank_training.py`. Data audit visual: `build_dashboard.py` →
+Fixed pipeline: `fixed_yogyank_training.py`. Data audit visual: `build_yogyank_data_explorer.py` →
 `artifacts/yogyank_data_explorer.html`. Broken-vs-fixed comparison: `compare_models.py` →
 `artifacts/compare_models.html`.*

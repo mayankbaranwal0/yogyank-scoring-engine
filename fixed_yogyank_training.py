@@ -16,11 +16,17 @@ What this fixes vs. the original draft:
   - Feature importances exported for explainability.
 """
 
+import datetime as dt
+import hashlib
+import json
 import os
+import platform
 
 import joblib
 import pandas as pd
 import plotly.express as px
+import sklearn
+import xgboost
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyRegressor
 from sklearn.impute import SimpleImputer
@@ -29,37 +35,23 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 from xgboost import XGBRegressor
 
-DATA_PATH = "farmer_scoring_sample_yogyank_round1.csv"
+# Schema and the as-of-date contract live in one place, shared with the explorer.
+from schema import (
+    AVAILABILITY_LABEL,
+    CATEGORICAL_FEATURES,
+    COLUMN_META,
+    FEATURES,
+    NUMERIC_FEATURES,
+    TARGET,
+    TIME_COL,
+)
+
+DATA_PATH = "farmer_scoring_sample_yogyank.csv"
 ARTIFACTS_DIR = "artifacts"
 MODEL_PATH = os.path.join(ARTIFACTS_DIR, "entitlement_model.pkl")
 IMPORTANCE_PATH = os.path.join(ARTIFACTS_DIR, "feature_importances.html")
-TARGET = "target_entitlement_score"
-TIME_COL = "application_year"
+METADATA_PATH = os.path.join(ARTIFACTS_DIR, "model_metadata.json")
 TRAIN_MAX_YEAR = 2023  # train on <= this year, test on the year(s) after
-
-# Columns known at scoring time. Deliberately excluded:
-#   farmer_id                     -> identifier, not predictive
-#   defaulted_in_next_12_months   -> FUTURE outcome (leakage)
-#   application_year              -> time index, used only for the split
-#   target_entitlement_score      -> the label
-NUMERIC_FEATURES = [
-    "land_area_acres",
-    "historical_repayment_score",
-    "annual_income_inr",
-    "liability_ratio_pct",
-    "rainfall_deviation_pct",
-    "ndvi_score",
-]
-CATEGORICAL_FEATURES = [
-    "district",
-    "crop_type",
-    "pm_kisan_status",
-    "irrigation_type",
-    "land_ownership",
-    "soil_type",
-    "sales_channel",
-]
-FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
 
 def load_data(path=DATA_PATH):
@@ -114,6 +106,60 @@ def feature_importance_frame(pipeline):
     )
 
 
+def _sha256(path):
+    """Hash the data file so the metadata records exactly what trained the model."""
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def schema_contract():
+    """The as-of-date contract as plain dicts, ready for JSON."""
+    return {
+        col: {"role": role, "availability": AVAILABILITY_LABEL[avail], "note": note}
+        for col, (role, avail, note) in COLUMN_META.items()
+    }
+
+
+def write_metadata(df, X_train, X_test, metrics):
+    """Self-describing sidecar: provenance, schema/contract, versions, validation."""
+    metadata = {
+        "created_at": dt.datetime.now().isoformat(timespec="seconds"),
+        "model": "XGBoost entitlement-score regressor",
+        "data": {
+            "file": DATA_PATH,
+            "n_rows": int(len(df)),
+            "sha256": _sha256(DATA_PATH),
+        },
+        "target": TARGET,
+        "features": {
+            "numeric": NUMERIC_FEATURES,
+            "categorical": CATEGORICAL_FEATURES,
+            "all": FEATURES,
+        },
+        "split": {
+            "strategy": "out-of-time",
+            "time_column": TIME_COL,
+            "train_max_year": TRAIN_MAX_YEAR,
+            "n_train": int(len(X_train)),
+            "n_test": int(len(X_test)),
+        },
+        "schema_contract": schema_contract(),
+        "versions": {
+            "python": platform.python_version(),
+            "pandas": pd.__version__,
+            "scikit_learn": sklearn.__version__,
+            "xgboost": xgboost.__version__,
+        },
+        "validation": metrics,
+    }
+    with open(METADATA_PATH, "w", encoding="utf-8") as fh:
+        json.dump(metadata, fh, indent=2)
+    print(f"Saved metadata to {METADATA_PATH}")
+
+
 def train():
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     df = load_data()
@@ -123,14 +169,18 @@ def train():
     # Baseline: always predict the training mean. Any real model must beat this.
     baseline = DummyRegressor(strategy="mean").fit(X_train, y_train)
     base_preds = baseline.predict(X_test)
+    base_mae = mean_absolute_error(y_test, base_preds)
+    base_r2 = r2_score(y_test, base_preds)
     print("\n--- Baseline (predict mean) ---")
-    print(f"MAE: {mean_absolute_error(y_test, base_preds):.2f}   R2: {r2_score(y_test, base_preds):.4f}")
+    print(f"MAE: {base_mae:.2f}   R2: {base_r2:.4f}")
 
     pipeline = build_pipeline()
     pipeline.fit(X_train, y_train)
     preds = pipeline.predict(X_test)
+    model_mae = mean_absolute_error(y_test, preds)
+    model_r2 = r2_score(y_test, preds)
     print("\n--- XGBoost pipeline ---")
-    print(f"MAE: {mean_absolute_error(y_test, preds):.2f}   R2: {r2_score(y_test, preds):.4f}")
+    print(f"MAE: {model_mae:.2f}   R2: {model_r2:.4f}")
 
     importances = feature_importance_frame(pipeline)
     print("\n--- Top feature importances ---")
@@ -155,6 +205,13 @@ def train():
     }
     joblib.dump(bundle, MODEL_PATH)
     print(f"Saved model bundle to {MODEL_PATH}")
+
+    metrics = {
+        "metric_note": "out-of-time holdout (test year > train_max_year)",
+        "baseline_mean": {"mae": round(float(base_mae), 4), "r2": round(float(base_r2), 4)},
+        "model": {"mae": round(float(model_mae), 4), "r2": round(float(model_r2), 4)},
+    }
+    write_metadata(df, X_train, X_test, metrics)
 
 
 if __name__ == "__main__":

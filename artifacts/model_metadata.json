@@ -1,0 +1,155 @@
+{
+  "created_at": "2026-06-16T09:42:56",
+  "model": "XGBoost entitlement-score regressor",
+  "data": {
+    "file": "farmer_scoring_sample_yogyank.csv",
+    "n_rows": 5000,
+    "sha256": "345c1f54ccb10d6bb0d52f0e65423b6f96c6f962bfc2c2abe979ee4679403cb1"
+  },
+  "target": "target_entitlement_score",
+  "features": {
+    "numeric": [
+      "land_area_acres",
+      "historical_repayment_score",
+      "annual_income_inr",
+      "liability_ratio_pct",
+      "rainfall_deviation_pct",
+      "ndvi_score"
+    ],
+    "categorical": [
+      "district",
+      "crop_type",
+      "pm_kisan_status",
+      "irrigation_type",
+      "land_ownership",
+      "soil_type",
+      "sales_channel"
+    ],
+    "all": [
+      "land_area_acres",
+      "historical_repayment_score",
+      "annual_income_inr",
+      "liability_ratio_pct",
+      "rainfall_deviation_pct",
+      "ndvi_score",
+      "district",
+      "crop_type",
+      "pm_kisan_status",
+      "irrigation_type",
+      "land_ownership",
+      "soil_type",
+      "sales_channel"
+    ]
+  },
+  "split": {
+    "strategy": "out-of-time",
+    "time_column": "application_year",
+    "train_max_year": 2023,
+    "n_train": 3606,
+    "n_test": 1394
+  },
+  "schema_contract": {
+    "farmer_id": {
+      "role": "identifier",
+      "availability": "not_a_feature",
+      "note": "Row key. Drop from features."
+    },
+    "application_year": {
+      "role": "temporal",
+      "availability": "available",
+      "note": "Application timestamp; defines the as-of date."
+    },
+    "district": {
+      "role": "feature",
+      "availability": "available",
+      "note": "Location is known at application."
+    },
+    "land_area_acres": {
+      "role": "feature",
+      "availability": "available",
+      "note": "Declared at application."
+    },
+    "crop_type": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "Assume declared/planted at application."
+    },
+    "pm_kisan_status": {
+      "role": "policy",
+      "availability": "available",
+      "note": "Enrolment status known at application."
+    },
+    "historical_repayment_score": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "Only valid if built from history BEFORE the scoring date."
+    },
+    "irrigation_type": {
+      "role": "feature",
+      "availability": "available",
+      "note": "Static attribute of the holding."
+    },
+    "land_ownership": {
+      "role": "feature",
+      "availability": "available",
+      "note": "Known at application."
+    },
+    "soil_type": {
+      "role": "feature",
+      "availability": "available",
+      "note": "Static attribute of the holding."
+    },
+    "sales_channel": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "May be measured over the season -> could bleed past scoring date."
+    },
+    "annual_income_inr": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "Self-reported at application = OK; reconciled later = leak."
+    },
+    "liability_ratio_pct": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "Must be an as-of-scoring-date snapshot."
+    },
+    "rainfall_deviation_pct": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "Season aggregate may extend past the scoring date."
+    },
+    "ndvi_score": {
+      "role": "feature",
+      "availability": "verify_as_of",
+      "note": "Satellite reading: as-of date OK; season composite = leak."
+    },
+    "defaulted_in_next_12_months": {
+      "role": "leak",
+      "availability": "leak_drop",
+      "note": "Outcome over [T, T+12mo] -> UNKNOWABLE at scoring time."
+    },
+    "target_entitlement_score": {
+      "role": "target",
+      "availability": "not_a_feature",
+      "note": "What we estimate (use UNMODIFIED; apply policy afterwards)."
+    }
+  },
+  "versions": {
+    "python": "3.14.4",
+    "pandas": "3.0.3",
+    "scikit_learn": "1.8.0",
+    "xgboost": "3.2.0"
+  },
+  "validation": {
+    "metric_note": "out-of-time holdout (test year > train_max_year)",
+    "baseline_mean": {
+      "mae": 87.3484,
+      "r2": -0.0
+    },
+    "model": {
+      "mae": 43.5871,
+      "r2": 0.7413
+    }
+  }
+}

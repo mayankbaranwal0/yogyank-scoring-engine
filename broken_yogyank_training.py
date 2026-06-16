@@ -4,6 +4,8 @@ Author: Junior Data Scientist
 Notes: Model is performing well. Validation score looks good. Ready for production.
 """
 
+import os
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -11,8 +13,12 @@ from sklearn.metrics import r2_score
 import xgboost as xgb
 import joblib
 
+# This (flawed) baseline model is written here. See AUDIT_MEMO.md for why it
+# is not trustworthy. Output goes to artifacts/ alongside the other generated files.
+MODEL_PATH = os.path.join("artifacts", "xgboost_baseline.pkl")
 
-def load_and_prep_data(path="farmer_scoring_sample_yogyank_round1.csv"):
+
+def load_and_prep_data(path="farmer_scoring_sample_yogyank.csv"):
     return pd.read_csv(path)
 
 
@@ -58,8 +64,9 @@ def train_model():
     score = r2_score(y_test, preds)
     print(f"Validation R2 Score: {score:.4f} (Wow!)")
 
-    joblib.dump(model, "xgboost_baseline.pkl")
-    print("Model saved to xgboost_baseline.pkl")
+    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+    joblib.dump(model, MODEL_PATH)
+    print(f"Model saved to {MODEL_PATH}")
 
 
 if __name__ == "__main__":

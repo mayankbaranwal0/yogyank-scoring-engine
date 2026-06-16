@@ -1,5 +1,5 @@
 """
-build_dashboard.py
+build_yogyank_data_explorer.py
 ==================
 Builds a single, self-contained, OFFLINE-viewable HTML explorer for the
 Yogyank farmer entitlement-scoring dataset.
@@ -20,8 +20,8 @@ time."
 Run
 ---
     pip install pandas plotly            # (xgboost + scikit-learn optional, see below)
-    python build_dashboard.py            # uses defaults below
-    python build_dashboard.py path/to/data.csv out.html
+    python build_yogyank_data_explorer.py            # uses defaults below
+    python build_yogyank_data_explorer.py path/to/data.csv out.html
 
 The R^2 "collapse" waterfall needs xgboost + scikit-learn (you already have
 them). If they are missing, the script still builds; that one panel degrades
@@ -46,57 +46,21 @@ from plotly.offline import get_plotlyjs
 # --------------------------------------------------------------------------- #
 # Configuration
 # --------------------------------------------------------------------------- #
-CSV_PATH = "farmer_scoring_sample_yogyank_round1.csv"
+# Schema, feature groups, and the as-of-date contract come from the shared module
+# so the explorer and the trainer can never disagree about them.
+from schema import (  # noqa: E402
+    CATEGORICAL_FEATURES,
+    COLUMN_META,
+    ID_COL,
+    LEAK_COL,
+    NUMERIC_FEATURES,
+    POLICY_COL,
+    TARGET,
+)
+from schema import TIME_COL as TEMPORAL  # this script uses the name TEMPORAL
+
+CSV_PATH = "farmer_scoring_sample_yogyank.csv"
 OUTPUT_HTML = "artifacts/yogyank_data_explorer.html"
-
-TARGET = "target_entitlement_score"
-LEAK_COL = "defaulted_in_next_12_months"          # forward-looking outcome
-TEMPORAL = "application_year"
-ID_COL = "farmer_id"
-POLICY_COL = "pm_kisan_status"
-
-# Explicit column groups (avoids dtype-sniffing surprises across pandas versions)
-NUMERIC_FEATURES = [
-    "land_area_acres",
-    "historical_repayment_score",
-    "annual_income_inr",
-    "liability_ratio_pct",
-    "rainfall_deviation_pct",
-    "ndvi_score",
-]
-CATEGORICAL_FEATURES = [
-    "district",
-    "crop_type",
-    "pm_kisan_status",
-    "irrigation_type",
-    "land_ownership",
-    "soil_type",
-    "sales_channel",
-]
-
-# Per-column ROLE and an availability ASSUMPTION (the seed of your schema/contract).
-# availability: "yes" (known at/before scoring), "no" (future -> leak),
-#               "assume" (plausibly fine but MUST be verified as as-of-scoring-date),
-#               "na"  (not a feature)
-COLUMN_META = {
-    "farmer_id":                   ("identifier", "na",     "Row key. Drop from features."),
-    "application_year":            ("temporal",   "yes",    "Application timestamp; defines the as-of date."),
-    "district":                    ("feature",    "yes",    "Location is known at application."),
-    "land_area_acres":             ("feature",    "yes",    "Declared at application."),
-    "crop_type":                   ("feature",    "assume", "Assume declared/planted at application."),
-    "pm_kisan_status":             ("policy",     "yes",    "Enrolment status known at application."),
-    "historical_repayment_score":  ("feature",    "assume", "Only valid if built from history BEFORE the scoring date."),
-    "irrigation_type":             ("feature",    "yes",    "Static attribute of the holding."),
-    "land_ownership":              ("feature",    "yes",    "Known at application."),
-    "soil_type":                   ("feature",    "yes",    "Static attribute of the holding."),
-    "sales_channel":               ("feature",    "assume", "May be measured over the season -> could bleed past scoring date."),
-    "annual_income_inr":           ("feature",    "assume", "Self-reported at application = OK; reconciled later = leak."),
-    "liability_ratio_pct":         ("feature",    "assume", "Must be an as-of-scoring-date snapshot."),
-    "rainfall_deviation_pct":      ("feature",    "assume", "Season aggregate may extend past the scoring date."),
-    "ndvi_score":                  ("feature",    "assume", "Satellite reading: as-of date OK; season composite = leak."),
-    "defaulted_in_next_12_months": ("leak",       "no",     "Outcome over [T, T+12mo] -> UNKNOWABLE at scoring time."),
-    "target_entitlement_score":    ("target",     "na",     "What we estimate (use UNMODIFIED; apply policy afterwards)."),
-}
 
 # --------------------------------------------------------------------------- #
 # Palette / theme  (one bold, meaningful choice: red == leak, everywhere)
@@ -559,7 +523,7 @@ def build_html(df: pd.DataFrame) -> str:
            "Use the dropdowns to switch fields. Rare categories give unstable encodings and shaky reason codes, worth noting now.")}
 
   <footer>
-    <p>Generated {stamp} from <code>{html.escape(Path(CSV_PATH).name)}</code> by <code>build_dashboard.py</code>.
+    <p>Generated {stamp} from <code>{html.escape(Path(CSV_PATH).name)}</code> by <code>build_yogyank_data_explorer.py</code>.
        Self-contained &amp; offline: the full Plotly library is embedded in this file.</p>
     <p>Synthetic data; the R² figures are a directional reproduction of the draft script, not exact.
        Nothing here is a production validation result.</p>
